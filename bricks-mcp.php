@@ -9,18 +9,18 @@
  *
  * @wordpress-plugin
  * Plugin Name:       Bricks MCP
- * Plugin URI:        https://aiforbricks.com
+ * Plugin URI:        https://github.com/forestnation/fn-bricks-mcp
  * Description:       AI-powered assistant for Bricks Builder. Control your website with natural language through MCP-compatible AI tools like Claude.
  * Version:           1.5.1
  * Requires at least: 6.4
  * Requires PHP:      8.2
- * Author:            Uibar Ion-Cristian
- * Author URI:        https://aiforbricks.com
+ * Author:            Forest Nation
+ * Author URI:        https://forestnation.com
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       bricks-mcp
  * Domain Path:       /languages
- * Update URI:        https://github.com/cristianuibar/bricks-mcp
+ * Update URI:        https://github.com/forestnation/fn-bricks-mcp
  */
 
 declare(strict_types=1);

@@ -31,7 +31,7 @@ final class UpdateChecker {
 	 *
 	 * @var string
 	 */
-	private const GITHUB_API_URL = 'https://api.github.com/repos/cristianuibar/bricks-mcp/releases/latest';
+	private const GITHUB_API_URL = 'https://api.github.com/repos/forestnation/fn-bricks-mcp/releases/latest';
 
 	/**
 	 * Transient key for cached update data.
@@ -236,7 +236,7 @@ final class UpdateChecker {
 
 		// Only verify our own plugin — leave other plugins untouched.
 		$plugin = $hook_extra['plugin'] ?? '';
-		if ( 'bricks-mcp/bricks-mcp.php' !== $plugin ) {
+		if ( BRICKS_MCP_PLUGIN_BASENAME !== $plugin ) {
 			return $reply;
 		}
 
