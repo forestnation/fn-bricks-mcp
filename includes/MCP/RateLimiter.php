@@ -112,12 +112,19 @@ final class RateLimiter {
 		$current       = get_transient( $transient_key );
 
 		if ( false === $current ) {
-			$count = 1;
-		} else {
-			$count = (int) $current + 1;
+			// First request in this window — set the transient with the full TTL.
+			set_transient( $transient_key, 1, self::WINDOW );
+			return 1;
 		}
 
-		set_transient( $transient_key, $count, self::WINDOW );
+		// Increment without resetting the expiry so the window slides correctly.
+		$count = (int) $current + 1;
+		$wpdb  = $GLOBALS['wpdb'];
+		$wpdb->update(
+			$wpdb->options,
+			[ 'option_value' => $count ],
+			[ 'option_name' => '_transient_' . $transient_key ]
+		);
 
 		return $count;
 	}

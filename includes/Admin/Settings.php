@@ -54,6 +54,7 @@ final class Settings {
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_scripts' ] );
 		add_action( 'wp_ajax_bricks_mcp_run_diagnostics', [ $this, 'ajax_run_diagnostics' ] );
 		add_action( 'wp_ajax_bricks_mcp_generate_app_password', [ $this, 'ajax_generate_app_password' ] );
+		add_action( 'wp_ajax_bricks_mcp_clear_rate_limits', [ $this, 'ajax_clear_rate_limits' ] );
 	}
 
 	/**
@@ -709,6 +710,9 @@ final class Settings {
 				<button type="button" class="button" id="bricks-mcp-copy-results" style="display:none;">
 					<?php esc_html_e( 'Copy Results', 'bricks-mcp' ); ?>
 				</button>
+				<button type="button" class="button" id="bricks-mcp-clear-rate-limits">
+					<?php esc_html_e( 'Clear Rate Limits', 'bricks-mcp' ); ?>
+				</button>
 				<span class="spinner" id="bricks-mcp-diagnostics-spinner"></span>
 			</div>
 			<div id="bricks-mcp-diagnostics-results"></div>
@@ -786,6 +790,26 @@ final class Settings {
 						btn.disabled = false;
 						spinner.classList.remove('is-active');
 						results.innerHTML = '<p style="color:#d63638;"><?php echo esc_js( __( 'Request failed. Please try again.', 'bricks-mcp' ) ); ?></p>';
+					});
+			});
+
+			document.getElementById('bricks-mcp-clear-rate-limits').addEventListener('click', function() {
+				var btn = this;
+				btn.disabled = true;
+				btn.textContent = '<?php echo esc_js( __( 'Clearing...', 'bricks-mcp' ) ); ?>';
+				var data = new FormData();
+				data.append('action', 'bricks_mcp_clear_rate_limits');
+				data.append('nonce', bricksMcpUpdates.nonce);
+				fetch(bricksMcpUpdates.ajaxUrl, { method: 'POST', body: data })
+					.then(function(r) { return r.json(); })
+					.then(function(response) {
+						btn.disabled = false;
+						btn.textContent = response.success
+							? '<?php echo esc_js( __( 'Cleared!', 'bricks-mcp' ) ); ?>'
+							: '<?php echo esc_js( __( 'Clear Rate Limits', 'bricks-mcp' ) ); ?>';
+						setTimeout(function() {
+							btn.textContent = '<?php echo esc_js( __( 'Clear Rate Limits', 'bricks-mcp' ) ); ?>';
+						}, 3000);
 					});
 			});
 
@@ -909,5 +933,25 @@ final class Settings {
 				'mcp_url'        => $mcp_url,
 			]
 		);
+	}
+
+	/**
+	 * AJAX handler: Delete all MCP rate limit transients.
+	 *
+	 * @return void
+	 */
+	public function ajax_clear_rate_limits(): void {
+		check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
+		}
+
+		global $wpdb;
+		$wpdb->query(
+			"DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_bricks_mcp_rl_%' OR option_name LIKE '_transient_timeout_bricks_mcp_rl_%'"
+		);
+
+		wp_send_json_success( [ 'message' => __( 'Rate limits cleared.', 'bricks-mcp' ) ] );
 	}
 }
