@@ -269,15 +269,23 @@ final class Server {
 			$token      = '';
 
 			// Check Authorization: Bearer <token> header first.
-			$auth_header = isset( $_SERVER['HTTP_AUTHORIZATION'] ) ? wp_unslash( $_SERVER['HTTP_AUTHORIZATION'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+			$auth_header = '';
+			if ( isset( $_SERVER['HTTP_AUTHORIZATION'] ) ) {
+				$auth_header = wp_unslash( $_SERVER['HTTP_AUTHORIZATION'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+			} elseif ( isset( $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ) ) {
+				$auth_header = wp_unslash( $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+			}
 			if ( preg_match( '/^Bearer\s+(\S+)$/i', $auth_header, $matches ) ) {
 				$token = sanitize_text_field( $matches[1] );
 			}
 
-			// Fall back to ?api_key= query param.
+			// Fall back to ?api_key= query param. Use $request->get_param() since
+			// WordPress doesn't always populate $_GET reliably for REST API routes.
 			if ( empty( $token ) ) {
-				// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-				$token = isset( $_GET['api_key'] ) ? sanitize_text_field( wp_unslash( $_GET['api_key'] ) ) : '';
+				$param = $request->get_param( 'api_key' );
+				if ( is_string( $param ) && ! empty( $param ) ) {
+					$token = sanitize_text_field( $param );
+				}
 			}
 
 			if ( ! empty( $token ) && ! empty( $stored_key ) && hash_equals( $stored_key, $token ) ) {
