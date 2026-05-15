@@ -453,6 +453,22 @@ final class Settings {
 			$mcp_url = rest_url( 'bricks-mcp/v1/mcp' );
 		}
 
+		// Build Claude Desktop config snippet (mcp-remote with API key).
+		$api_key              = get_option( 'bricks_mcp_api_key', '' );
+		$mcp_url_with_api_key = $mcp_url . ( strpos( $mcp_url, '?' ) !== false ? '&' : '?' ) . 'api_key=' . rawurlencode( $api_key );
+
+		$claude_desktop_config = json_encode(
+			[
+				'mcpServers' => [
+					'bricks-mcp' => [
+						'command' => 'npx',
+						'args'    => [ '-y', 'mcp-remote', $mcp_url_with_api_key ],
+					],
+				],
+			],
+			JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
+		);
+
 		// Build Claude Code config snippet.
 		$claude_config = json_encode(
 			[
@@ -539,7 +555,10 @@ final class Settings {
 
 			<div class="bricks-mcp-tabs bricks-mcp-tabs-wrap">
 				<div role="tablist">
-					<button type="button" role="tab" id="bricks-mcp-tab-claude" data-tab="claude" aria-selected="true" aria-controls="bricks-mcp-panel-claude" tabindex="0" class="active">
+					<button type="button" role="tab" id="bricks-mcp-tab-claude-desktop" data-tab="claude-desktop" aria-selected="true" aria-controls="bricks-mcp-panel-claude-desktop" tabindex="0" class="active">
+						<?php esc_html_e( 'Claude Desktop', 'bricks-mcp' ); ?>
+					</button>
+					<button type="button" role="tab" id="bricks-mcp-tab-claude" data-tab="claude" aria-selected="false" aria-controls="bricks-mcp-panel-claude" tabindex="-1">
 						<?php esc_html_e( 'Claude Code', 'bricks-mcp' ); ?>
 					</button>
 					<button type="button" role="tab" id="bricks-mcp-tab-gemini" data-tab="gemini" aria-selected="false" aria-controls="bricks-mcp-panel-gemini" tabindex="-1">
@@ -547,8 +566,40 @@ final class Settings {
 					</button>
 				</div>
 
+				<!-- Claude Desktop Panel -->
+				<div role="tabpanel" id="bricks-mcp-panel-claude-desktop" aria-labelledby="bricks-mcp-tab-claude-desktop" data-panel="claude-desktop">
+					<div class="bricks-mcp-code-wrap">
+						<pre><code id="bricks-mcp-claude-desktop-config"><?php echo esc_html( $claude_desktop_config ); ?></code></pre>
+						<button type="button" class="button bricks-mcp-copy-btn" data-target="bricks-mcp-claude-desktop-config">
+							<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
+						</button>
+					</div>
+					<p class="description bricks-mcp-tab-description">
+						<?php esc_html_e( 'Add this to your claude_desktop_config.json file.', 'bricks-mcp' ); ?>
+					</p>
+					<p class="description">
+						<?php
+						echo wp_kses(
+							__( 'On Windows (Store version), config is at: <code>%LOCALAPPDATA%\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Roaming\\Claude\\claude_desktop_config.json</code>. Requires <strong>Node.js</strong> installed on your machine (mcp-remote is downloaded automatically by npx).', 'bricks-mcp' ),
+							[
+								'code'   => [],
+								'strong' => [],
+							]
+						);
+						?>
+					</p>
+					<p class="description">
+						<?php
+						echo wp_kses(
+							__( 'The <code>api_key</code> in the URL above is your unique server key — keep it secret. To regenerate it, use WP-CLI: <code>wp option delete bricks_mcp_api_key</code> then reload this page.', 'bricks-mcp' ),
+							[ 'code' => [] ]
+						);
+						?>
+					</p>
+				</div>
+
 				<!-- Claude Code Panel -->
-				<div role="tabpanel" id="bricks-mcp-panel-claude" aria-labelledby="bricks-mcp-tab-claude" data-panel="claude">
+				<div role="tabpanel" id="bricks-mcp-panel-claude" aria-labelledby="bricks-mcp-tab-claude" data-panel="claude" style="display:none;">
 					<div class="bricks-mcp-code-wrap">
 						<pre><code id="bricks-mcp-claude-config"><?php echo esc_html( $claude_config ); ?></code></pre>
 						<button type="button" class="button bricks-mcp-copy-btn" data-target="bricks-mcp-claude-config">
