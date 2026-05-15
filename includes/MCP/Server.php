@@ -262,21 +262,21 @@ final class Server {
 			);
 		}
 
-		// Check if authentication is required.
-		if ( ! empty( $settings['require_auth'] ) ) {
-			// Try API key authentication (for URL-based auth, e.g. Claude Desktop via mcp-remote).
-			if ( ! is_user_logged_in() ) {
-				// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-				$api_key    = isset( $_GET['api_key'] ) ? sanitize_text_field( wp_unslash( $_GET['api_key'] ) ) : '';
-				$stored_key = get_option( 'bricks_mcp_api_key', '' );
-				if ( ! empty( $api_key ) && ! empty( $stored_key ) && hash_equals( $stored_key, $api_key ) ) {
-					$admins = get_users( [ 'role' => 'administrator', 'number' => 1, 'fields' => 'ID' ] );
-					if ( ! empty( $admins ) ) {
-						wp_set_current_user( (int) $admins[0] );
-					}
+		// Try API key authentication before any other checks (so rate limit uses user ID, not IP).
+		if ( ! is_user_logged_in() ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$api_key    = isset( $_GET['api_key'] ) ? sanitize_text_field( wp_unslash( $_GET['api_key'] ) ) : '';
+			$stored_key = get_option( 'bricks_mcp_api_key', '' );
+			if ( ! empty( $api_key ) && ! empty( $stored_key ) && hash_equals( $stored_key, $api_key ) ) {
+				$admins = get_users( [ 'role' => 'administrator', 'number' => 1, 'fields' => 'ID' ] );
+				if ( ! empty( $admins ) ) {
+					wp_set_current_user( (int) $admins[0] );
 				}
 			}
+		}
 
+		// Check if authentication is required.
+		if ( ! empty( $settings['require_auth'] ) ) {
 			if ( ! is_user_logged_in() ) {
 				return new \WP_Error(
 					'bricks_mcp_unauthorized',
