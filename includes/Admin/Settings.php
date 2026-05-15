@@ -453,16 +453,15 @@ final class Settings {
 			$mcp_url = rest_url( 'bricks-mcp/v1/mcp' );
 		}
 
-		// Build Claude Desktop config snippet (mcp-remote with API key).
-		$api_key              = get_option( 'bricks_mcp_api_key', '' );
-		$mcp_url_with_api_key = $mcp_url . ( strpos( $mcp_url, '?' ) !== false ? '&' : '?' ) . 'api_key=' . rawurlencode( $api_key );
+		// Build Claude Desktop config snippet (mcp-remote with Bearer token in header).
+		$api_key = get_option( 'bricks_mcp_api_key', '' );
 
 		$claude_desktop_config = json_encode(
 			[
 				'mcpServers' => [
 					'bricks-mcp' => [
 						'command' => 'npx',
-						'args'    => [ '-y', 'mcp-remote', $mcp_url_with_api_key ],
+						'args'    => [ '-y', 'mcp-remote', $mcp_url, '--header', 'Authorization: Bearer ' . $api_key ],
 					],
 				],
 			],
@@ -591,7 +590,7 @@ final class Settings {
 					<p class="description">
 						<?php
 						echo wp_kses(
-							__( 'The <code>api_key</code> in the URL above is your unique server key — keep it secret. To regenerate it, use WP-CLI: <code>wp option delete bricks_mcp_api_key</code> then reload this page.', 'bricks-mcp' ),
+							__( 'The Bearer token above is your unique server key — keep it secret. To regenerate it, use WP-CLI: <code>wp option delete bricks_mcp_api_key</code> then reload this page.', 'bricks-mcp' ),
 							[ 'code' => [] ]
 						);
 						?>

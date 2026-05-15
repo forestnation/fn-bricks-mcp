@@ -263,11 +263,24 @@ final class Server {
 		}
 
 		// Try API key authentication before any other checks (so rate limit uses user ID, not IP).
+		// Accepts Bearer token in Authorization header (preferred) or ?api_key= query param (fallback).
 		if ( ! is_user_logged_in() ) {
-			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			$api_key    = isset( $_GET['api_key'] ) ? sanitize_text_field( wp_unslash( $_GET['api_key'] ) ) : '';
 			$stored_key = get_option( 'bricks_mcp_api_key', '' );
-			if ( ! empty( $api_key ) && ! empty( $stored_key ) && hash_equals( $stored_key, $api_key ) ) {
+			$token      = '';
+
+			// Check Authorization: Bearer <token> header first.
+			$auth_header = isset( $_SERVER['HTTP_AUTHORIZATION'] ) ? wp_unslash( $_SERVER['HTTP_AUTHORIZATION'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+			if ( preg_match( '/^Bearer\s+(\S+)$/i', $auth_header, $matches ) ) {
+				$token = sanitize_text_field( $matches[1] );
+			}
+
+			// Fall back to ?api_key= query param.
+			if ( empty( $token ) ) {
+				// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+				$token = isset( $_GET['api_key'] ) ? sanitize_text_field( wp_unslash( $_GET['api_key'] ) ) : '';
+			}
+
+			if ( ! empty( $token ) && ! empty( $stored_key ) && hash_equals( $stored_key, $token ) ) {
 				$admins = get_users( [ 'role' => 'administrator', 'number' => 1, 'fields' => 'ID' ] );
 				if ( ! empty( $admins ) ) {
 					wp_set_current_user( (int) $admins[0] );
@@ -277,19 +290,6 @@ final class Server {
 
 		// Check if authentication is required.
 		if ( ! empty( $settings['require_auth'] ) ) {
-			// Try API key authentication (for URL-based auth, e.g. Claude Desktop via mcp-remote).
-			if ( ! is_user_logged_in() ) {
-				// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-				$api_key    = isset( $_GET['api_key'] ) ? sanitize_text_field( wp_unslash( $_GET['api_key'] ) ) : '';
-				$stored_key = get_option( 'bricks_mcp_api_key', '' );
-				if ( ! empty( $api_key ) && ! empty( $stored_key ) && hash_equals( $stored_key, $api_key ) ) {
-					$admins = get_users( [ 'role' => 'administrator', 'number' => 1, 'fields' => 'ID' ] );
-					if ( ! empty( $admins ) ) {
-						wp_set_current_user( (int) $admins[0] );
-					}
-				}
-			}
-
 			if ( ! is_user_logged_in() ) {
 				return new \WP_Error(
 					'bricks_mcp_unauthorized',
