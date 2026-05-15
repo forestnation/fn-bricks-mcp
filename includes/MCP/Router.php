@@ -372,10 +372,7 @@ final class Router {
 	 * @return array<string, mixed>
 	 */
 	private function get_default_tool_output_schema( string $name ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
-		return array(
-			'type'                 => 'object',
-			'additionalProperties' => true,
-		);
+		return array();
 	}
 
 	/**
