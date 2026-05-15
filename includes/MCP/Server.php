@@ -262,8 +262,10 @@ final class Server {
 			);
 		}
 
-		// Try API key authentication before any other checks (so rate limit uses user ID, not IP).
+		// Try API key / Bearer token authentication.
 		// Accepts Bearer token in Authorization header (preferred) or ?api_key= query param (fallback).
+		// If the token matches, skip rate limiting — a valid API key is a trusted client.
+		$api_key_authenticated = false;
 		if ( ! is_user_logged_in() ) {
 			$stored_key = get_option( 'bricks_mcp_api_key', '' );
 			$token      = '';
@@ -279,8 +281,7 @@ final class Server {
 				$token = sanitize_text_field( $matches[1] );
 			}
 
-			// Fall back to ?api_key= query param. Use $request->get_param() since
-			// WordPress doesn't always populate $_GET reliably for REST API routes.
+			// Fall back to ?api_key= query param.
 			if ( empty( $token ) ) {
 				$param = $request->get_param( 'api_key' );
 				if ( is_string( $param ) && ! empty( $param ) ) {
@@ -292,6 +293,7 @@ final class Server {
 				$admins = get_users( [ 'role' => 'administrator', 'number' => 1, 'fields' => 'ID' ] );
 				if ( ! empty( $admins ) ) {
 					wp_set_current_user( (int) $admins[0] );
+					$api_key_authenticated = true;
 				}
 			}
 		}
@@ -316,14 +318,16 @@ final class Server {
 			}
 		}
 
-		// Rate limit all requests (authenticated by user ID, anonymous by IP).
-		$remote_addr = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown';
-		$identifier  = is_user_logged_in()
-			? 'user_' . get_current_user_id()
-			: 'ip_' . $remote_addr;
-		$rate_check  = RateLimiter::check( $identifier );
-		if ( is_wp_error( $rate_check ) ) {
-			return $rate_check;
+		// Rate limit all requests except those authenticated via API key / Bearer token.
+		if ( ! $api_key_authenticated ) {
+			$remote_addr = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown';
+			$identifier  = is_user_logged_in()
+				? 'user_' . get_current_user_id()
+				: 'ip_' . $remote_addr;
+			$rate_check  = RateLimiter::check( $identifier );
+			if ( is_wp_error( $rate_check ) ) {
+				return $rate_check;
+			}
 		}
 
 		return true;
