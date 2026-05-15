@@ -175,6 +175,11 @@ final class Plugin {
 		if ( $dirty ) {
 			update_option( 'bricks_mcp_settings', $settings );
 		}
+
+		// Generate MCP API key for URL-based auth (Claude Desktop) if not exists.
+		if ( ! get_option( 'bricks_mcp_api_key' ) ) {
+			update_option( 'bricks_mcp_api_key', wp_generate_password( 32, false ) );
+		}
 	}
 
 	/**
